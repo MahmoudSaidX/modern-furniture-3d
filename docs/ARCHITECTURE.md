@@ -31,9 +31,12 @@ layers are committed.
   route itself, one folder per feature (first: `product-scene/`).
 - **Product Scene** (`src/features/product-scene/`) — 3D rendering for
   individual product viewing/configuration, built on React Three Fiber and
-  Drei (lower-level Three.js only when genuinely needed). First content:
-  `ProductScene`, a development scene (camera, environment/lighting, model,
-  orbit controls, localized DOM loading overlay).
+  Drei (lower-level Three.js only when genuinely needed). `ProductScene` is
+  the customer-facing Product Studio rendered on `/[lang]`: neutral studio
+  lighting and contact shadows, a constrained orbit camera framed from the
+  model's bounds, and localized DOM overlays (loading state, Zoom In/Zoom
+  Out/Reset View controls). Camera state stays in the controls and component
+  refs — never in Zustand.
   Animation ownership, scene states and timeline rules are defined in
   [`ANIMATION.md`](ANIMATION.md).
 - **Public 3D assets** (`public/models/`) — GLB models served by Next.js as
