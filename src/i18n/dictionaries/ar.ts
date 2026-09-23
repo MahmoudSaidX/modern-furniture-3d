@@ -18,6 +18,12 @@ const ar = {
       caption: "مرّر للاستكشاف",
     },
     loading: "جارٍ تحميل النموذج ثلاثي الأبعاد…",
+    controls: {
+      label: "عناصر التحكم في الكاميرا",
+      zoomIn: "تكبير",
+      zoomOut: "تصغير",
+      reset: "إعادة ضبط العرض",
+    },
   },
 } satisfies Dictionary;
 

@@ -58,8 +58,5 @@ by the stories that use them.
 
 ## Current implementation
 
-`ProductScene` (development scene) contains a lifecycle proof only: one
-timeline that rotates the model into place on mount while `sceneState` is
-`PRODUCT`, is killed when OrbitControls fires `start`, and is reverted on
-unmount. Its values (GSAP default duration and ease) are placeholders, not
-final choreography, camera behavior or animation UX.
+No timelines exist yet. The S0-07 lifecycle proof in `ProductScene` was
+removed in US-101; the cinematic product introduction belongs to US-102.

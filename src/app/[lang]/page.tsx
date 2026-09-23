@@ -1,4 +1,5 @@
 import { stockholmChair } from "@/data/products";
+import { ProductScene } from "@/features/product-scene/ProductScene";
 import { getDictionary, getLocale } from "@/i18n/get-dictionary";
 
 export default async function Home() {
@@ -12,6 +13,10 @@ export default async function Home() {
       <section aria-label={dict.scene.overlay.headline}>
         <p className="text-xl">{dict.scene.overlay.headline}</p>
         <p className="text-sm opacity-70">{dict.scene.overlay.caption}</p>
+      </section>
+
+      <section className="h-[60vh] w-full max-w-5xl sm:h-[70vh]">
+        <ProductScene labels={dict.scene} />
       </section>
 
       <article>

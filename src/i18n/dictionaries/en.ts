@@ -18,6 +18,12 @@ const en = {
       caption: "Scroll to explore",
     },
     loading: "Loading 3D model…",
+    controls: {
+      label: "Camera controls",
+      zoomIn: "Zoom in",
+      zoomOut: "Zoom out",
+      reset: "Reset view",
+    },
   },
 };
 

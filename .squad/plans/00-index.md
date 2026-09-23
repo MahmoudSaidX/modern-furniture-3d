@@ -10,3 +10,4 @@ One row per feature folder under `.squad/plans/`. `NN` continues as a global exe
 | shared-state | [00-overview.md](shared-state/00-overview.md) | 04 |
 | spec-workflow | [00-overview.md](spec-workflow/00-overview.md) | 05 |
 | planning-workflow | [00-overview.md](planning-workflow/00-overview.md) | 06 |
+| interactive-product | [00-overview.md](interactive-product/00-overview.md) | 07 |

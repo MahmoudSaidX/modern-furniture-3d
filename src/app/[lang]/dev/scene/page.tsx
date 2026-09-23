@@ -11,7 +11,7 @@ export default async function DevScenePage() {
   return (
     <main className="flex flex-1 flex-col">
       <div className="h-[70vh] w-full">
-        <ProductScene loadingLabel={dict.scene.loading} />
+        <ProductScene labels={dict.scene} />
       </div>
     </main>
   );
