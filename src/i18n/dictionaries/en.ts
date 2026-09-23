@@ -24,6 +24,9 @@ const en = {
       zoomOut: "Zoom out",
       reset: "Reset view",
     },
+    focus: {
+      label: "Product details",
+    },
   },
 };
 

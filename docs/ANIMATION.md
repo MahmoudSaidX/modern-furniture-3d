@@ -58,8 +58,8 @@ by the stories that use them.
 
 ## Current implementation
 
-US-102's cinematic product introduction is the only timeline. It lives in
-`CinematicIntro` in `ProductScene.tsx`:
+US-102's cinematic product introduction lives in `CinematicIntro` in
+`ProductScene.tsx`:
 
 - It starts after the GLB has loaded, because it sits inside the model's
   `Suspense`. Over 3 s the camera moves from a wide pose to the canonical
@@ -75,8 +75,39 @@ US-102's cinematic product introduction is the only timeline. It lives in
   animated.
 - **Reduced motion:** with `prefers-reduced-motion: reduce`, the intro is
   skipped and the scene starts at the canonical pose with the final UI.
-- **Once per mount:** the intro plays at most once per mount.
+- **Once per mount:** the intro plays at most once per mount; once it has
+  finished, input no longer calls `finish()`, so it never re-applies the pose.
 - **One final pose:** intro completion, skip, reduced motion and Reset View all
   use `applyPose`, so they always produce the same view.
 - **Controls stay usable:** the controls stay focusable and operable
   throughout; only their opacity is reduced.
+
+### Detail focus (US-103)
+
+The Product Studio's inspection regions (Fabric, Cushion, Frame, Legs) are
+camera views stored in product data (`focusRegions` in `src/data/products.ts`):
+target, distance, azimuth, polar angle and per-region zoom/orbit limits.
+`ProductScene` owns the moves.
+
+- **Move:** selecting a region tweens camera and target from the current
+  view to the region pose in spherical coordinates (1.2 s, `power2.inOut`).
+  Region → region moves go directly. `controls.enabled = false` while it runs,
+  so GSAP is the only camera writer and no limits pull the camera off its path.
+- **Arrival:** the region's limits are applied and `applyPose` syncs
+  OrbitControls on the region pose; the view holds until another region or
+  Reset. The active region is local UI state, not `sceneState`.
+- **Reset:** exits inspection: clears the region, restores the full-product
+  limits and returns smoothly to the canonical pose. With no region active,
+  Reset stays instant.
+- **Reduced motion:** focus and reset poses apply immediately.
+- **Portrait:** a region may carry an optional `portrait` override (only the
+  values that differ, e.g. distance and zoom limits), used when the canvas is
+  taller than wide at selection time. A resize while inspecting keeps the
+  current pose and limits.
+
+Interruption differs from the intro:
+
+| Timeline   | Manual interaction (pointer, touch, wheel, zoom) during the timeline                                                                                                                                                                                                                               |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Intro      | Kills the timeline and **snaps to the final** canonical pose.                                                                                                                                                                                                                                      |
+| Focus move | Kills the timeline and **keeps the exact current pose**. OrbitControls takes over with temporary limits: the destination limits widened just enough to contain that pose, so nothing snaps. They never change the region data; the next region selection installs that region's limits on arrival. |

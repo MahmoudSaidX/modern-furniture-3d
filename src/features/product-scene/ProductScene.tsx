@@ -1,11 +1,12 @@
 "use client";
 
-import { Suspense, useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } from "react";
+import { Suspense, useLayoutEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, Lightformer, OrbitControls, useGLTF, useProgress } from "@react-three/drei";
 import { Box3, MathUtils, Sphere, Spherical, Vector3, type Object3D, type PerspectiveCamera } from "three";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import type { FocusCamera, FocusRegion } from "@/data/products";
 import type { Dictionary } from "@/i18n/dictionaries/en";
 
 const MODEL_URL = "/models/stockholm-chair.glb";
@@ -27,16 +28,32 @@ const SUBDUED_CONTROLS_OPACITY = 0.5;
 const WIDE_DISTANCE_FACTOR = 1.6; // Stays below maxDistance (2 × fit).
 const WIDE_AZIMUTH_OFFSET = -0.35; // Radians; same polar angle, so within the limits.
 
+// Detail focus (US-103): camera move to or from an inspection region.
+const FOCUS_SECONDS = 1.2;
+
 gsap.registerPlugin(useGSAP);
 
 // Drei's OrbitControls instance (three-stdlib).
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>;
 type CameraPose = { position: Vector3; target: Vector3 };
+type CameraLimits = Pick<
+  FocusCamera,
+  "minDistance" | "maxDistance" | "minAzimuth" | "maxAzimuth" | "minPolar" | "maxPolar"
+>;
+
+// A region with its copy already localized by the page.
+export type SceneRegion = {
+  id: FocusRegion["id"];
+  name: string;
+  description: string;
+  camera: FocusCamera;
+};
 
 type ProductSceneProps = {
   labels: Dictionary["scene"];
   name: string;
   tagline: string;
+  regions: SceneRegion[];
 };
 
 // The single path to the canonical framing: intro completion, intro skip,
@@ -51,6 +68,48 @@ function applyPose(controls: OrbitControlsImpl, pose: CameraPose) {
   controls.target.copy(pose.target);
   controls.update();
   controls.enableDamping = damping;
+}
+
+function applyLimits(controls: OrbitControlsImpl, limits: CameraLimits) {
+  controls.minDistance = limits.minDistance;
+  controls.maxDistance = limits.maxDistance;
+  controls.minAzimuthAngle = limits.minAzimuth;
+  controls.maxAzimuthAngle = limits.maxAzimuth;
+  controls.minPolarAngle = limits.minPolar;
+  controls.maxPolarAngle = limits.maxPolar;
+}
+
+// Returns a new, temporary copy of `limits` widened just enough to contain the
+// camera's current pose, so the next update() moves nothing (no snap). It never
+// mutates the region data or the full-product limits.
+function widenToCurrent(controls: OrbitControlsImpl, limits: CameraLimits): CameraLimits {
+  const current = new Spherical().setFromVector3(controls.object.position.clone().sub(controls.target));
+  const minAzimuth = Math.min(limits.minAzimuth, current.theta);
+  const maxAzimuth = Math.max(limits.maxAzimuth, current.theta);
+  const unbounded = maxAzimuth - minAzimuth >= 2 * Math.PI;
+  return {
+    minDistance: Math.min(limits.minDistance, current.radius),
+    maxDistance: Math.max(limits.maxDistance, current.radius),
+    minAzimuth: unbounded ? -Infinity : minAzimuth,
+    maxAzimuth: unbounded ? Infinity : maxAzimuth,
+    minPolar: Math.min(limits.minPolar, current.phi),
+    maxPolar: Math.max(limits.maxPolar, current.phi),
+  };
+}
+
+// Region camera for the viewer's current shape: the portrait override applies
+// when the canvas is taller than it is wide.
+function resolveCamera(controls: OrbitControlsImpl, camera: FocusCamera): FocusCamera {
+  const canvas = controls.domElement;
+  const portrait = canvas ? canvas.clientWidth < canvas.clientHeight : false;
+  return portrait && camera.portrait ? { ...camera, ...camera.portrait } : camera;
+}
+
+// The only place region data becomes a camera pose.
+function regionPose(camera: FocusCamera): CameraPose {
+  const target = new Vector3(...camera.target);
+  const offset = new Vector3().setFromSpherical(new Spherical(camera.distance, camera.polar, camera.azimuth));
+  return { position: target.clone().add(offset), target };
 }
 
 function useModelBounds(scene: Object3D) {
@@ -72,10 +131,14 @@ function CameraRig({
   scene,
   controlsRef,
   canonicalRef,
+  productLimitsRef,
+  inspectingRef,
 }: {
   scene: Object3D;
   controlsRef: RefObject<OrbitControlsImpl | null>;
   canonicalRef: RefObject<CameraPose | null>;
+  productLimitsRef: RefObject<CameraLimits | null>;
+  inspectingRef: RefObject<boolean>;
 }) {
   const { center, radius } = useModelBounds(scene);
   const camera = useThree((state) => state.camera) as PerspectiveCamera;
@@ -93,10 +156,16 @@ function CameraRig({
     const fov = aspect < 1 ? 2 * Math.atan(Math.tan(vfov / 2) * aspect) : vfov;
     const fit = radius / Math.sin(fov / 2);
 
-    controls.minDistance = radius * 1.2;
-    controls.maxDistance = fit * 2;
-    controls.minPolarAngle = MIN_POLAR_ANGLE;
-    controls.maxPolarAngle = MAX_POLAR_ANGLE;
+    productLimitsRef.current = {
+      minDistance: radius * 1.2,
+      maxDistance: fit * 2,
+      minAzimuth: -Infinity,
+      maxAzimuth: Infinity,
+      minPolar: MIN_POLAR_ANGLE,
+      maxPolar: MAX_POLAR_ANGLE,
+    };
+    // While inspecting, the region's (or temporary) limits stay in place.
+    if (!inspectingRef.current) applyLimits(controls, productLimitsRef.current);
     controls.enablePan = false;
 
     canonicalRef.current = {
@@ -112,7 +181,7 @@ function CameraRig({
       controls.target.copy(canonicalRef.current.target);
     }
     controls.update();
-  }, [camera, canonicalRef, center, controlsRef, radius, size]);
+  }, [camera, canonicalRef, center, controlsRef, inspectingRef, productLimitsRef, radius, size]);
 
   return null;
 }
@@ -196,7 +265,12 @@ function CinematicIntro({ controlsRef, canonicalRef, copyRef, controlsUiRef, fin
   return null;
 }
 
-function Model({ controlsRef, canonicalRef, ...intro }: IntroRefs) {
+type ModelProps = IntroRefs & {
+  productLimitsRef: RefObject<CameraLimits | null>;
+  inspectingRef: RefObject<boolean>;
+};
+
+function Model({ controlsRef, canonicalRef, productLimitsRef, inspectingRef, ...intro }: ModelProps) {
   const { scene } = useGLTF(MODEL_URL);
   const { footprint } = useModelBounds(scene);
 
@@ -205,7 +279,13 @@ function Model({ controlsRef, canonicalRef, ...intro }: IntroRefs) {
       <primitive object={scene} />
       {/* Static model: render the soft shadow once. */}
       <ContactShadows frames={1} opacity={0.4} blur={2.5} far={1} scale={footprint * 2} />
-      <CameraRig scene={scene} controlsRef={controlsRef} canonicalRef={canonicalRef} />
+      <CameraRig
+        scene={scene}
+        controlsRef={controlsRef}
+        canonicalRef={canonicalRef}
+        productLimitsRef={productLimitsRef}
+        inspectingRef={inspectingRef}
+      />
       <CinematicIntro controlsRef={controlsRef} canonicalRef={canonicalRef} {...intro} />
     </>
   );
@@ -227,16 +307,118 @@ const buttonClass =
   "grid min-h-11 min-w-11 place-items-center rounded-full bg-white/90 px-4 text-sm font-medium text-neutral-900 shadow-sm hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900";
 
 // The scene is identical for every locale: it never reads `dir` or the locale.
-export function ProductScene({ labels, name, tagline }: ProductSceneProps) {
+export function ProductScene({ labels, name, tagline, regions }: ProductSceneProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const canonicalRef = useRef<CameraPose>(null);
   const copyRef = useRef<HTMLDivElement>(null);
   const controlsUiRef = useRef<HTMLDivElement>(null);
   const finishRef = useRef<(() => void) | null>(null);
   const playedRef = useRef(false);
+  // Detail focus: the active region is local UI state; camera state stays in refs.
+  const [activeRegion, setActiveRegion] = useState<SceneRegion | null>(null);
+  const productLimitsRef = useRef<CameraLimits>(null);
+  const inspectingRef = useRef(false);
+  const transitionRef = useRef<{
+    tween: gsap.core.Tween;
+    limits: CameraLimits;
+  } | null>(null);
 
-  // Any meaningful interaction ends the intro at the canonical pose.
-  const finishIntro = () => finishRef.current?.();
+  const { contextSafe } = useGSAP(() => () => {
+    // Never leave the controls disabled if unmounted mid-move.
+    const controls = controlsRef.current;
+    if (controls) controls.enabled = true;
+  });
+
+  // Any meaningful interaction ends the intro at the canonical pose. Once the
+  // intro has finished it is a no-op, so later input never re-applies that pose.
+  const finishIntro = () => {
+    if (!playedRef.current) finishRef.current?.();
+  };
+
+  // Unlike the intro, an interrupted focus move stops where it is: the camera
+  // keeps its exact pose and OrbitControls takes over with the destination
+  // limits widened to contain it, so nothing snaps.
+  const interruptTransition = () => {
+    const controls = controlsRef.current;
+    const transition = transitionRef.current;
+    if (!controls || !transition) return;
+    transition.tween.kill();
+    transitionRef.current = null;
+    applyLimits(controls, widenToCurrent(controls, transition.limits));
+    controls.update();
+    controls.enabled = true;
+  };
+
+  const onViewerInput = () => {
+    finishIntro();
+    interruptTransition();
+  };
+
+  // Moves camera and target from the current view to `end`, then calls
+  // `arrive`. GSAP is the only camera writer while it runs; no limits apply.
+  const moveTo = (end: CameraPose, limits: CameraLimits, arrive: () => void) => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    transitionRef.current?.tween.kill();
+    transitionRef.current = null;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      arrive();
+      return;
+    }
+
+    controls.enabled = false;
+    const camera = controls.object;
+    const startTarget = controls.target.clone();
+    const from = new Spherical().setFromVector3(camera.position.clone().sub(startTarget));
+    const to = new Spherical().setFromVector3(end.position.clone().sub(end.target));
+    // Shortest way around.
+    const dTheta = MathUtils.euclideanModulo(to.theta - from.theta + Math.PI, 2 * Math.PI) - Math.PI;
+    const current = new Spherical();
+    const offset = new Vector3();
+    const progress = { t: 0 };
+
+    // Created in the useGSAP context, so it is reverted on unmount.
+    const tween = contextSafe(() =>
+      gsap.to(progress, {
+        t: 1,
+        duration: FOCUS_SECONDS,
+        ease: "power2.inOut",
+        onUpdate: () => {
+          const t = progress.t;
+          controls.target.lerpVectors(startTarget, end.target, t);
+          current.set(
+            MathUtils.lerp(from.radius, to.radius, t),
+            MathUtils.lerp(from.phi, to.phi, t),
+            from.theta + dTheta * t,
+          );
+          camera.position.copy(controls.target).add(offset.setFromSpherical(current));
+          camera.lookAt(controls.target);
+        },
+        onComplete: () => {
+          transitionRef.current = null;
+          arrive();
+        },
+      }),
+    )();
+    transitionRef.current = { tween, limits };
+  };
+
+  const selectRegion = (region: SceneRegion) => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    finishIntro();
+    inspectingRef.current = true;
+    setActiveRegion(region);
+    // Canonical limits from data, freshly installed on arrival.
+    const camera = resolveCamera(controls, region.camera);
+    const limits: CameraLimits = camera;
+    const pose = regionPose(camera);
+    moveTo(pose, limits, () => {
+      applyLimits(controls, limits);
+      applyPose(controls, pose);
+      controls.enabled = true;
+    });
+  };
 
   // Moves the camera along its view direction, within the zoom limits.
   const zoomBy = (factor: number) => {
@@ -248,20 +430,35 @@ export function ProductScene({ labels, name, tagline }: ProductSceneProps) {
     controls.update();
   };
 
-  // Restores the canonical pose. Camera only: no store or product writes.
+  // Restores the canonical pose and the full-product limits. From a region it
+  // is a smooth return; otherwise instant, as in US-101. No store writes.
   const resetView = () => {
     const controls = controlsRef.current;
     const pose = canonicalRef.current;
-    if (!controls || !pose) return;
-    applyPose(controls, pose);
+    const limits = productLimitsRef.current;
+    if (!controls || !pose || !limits) return;
+    const arrive = () => {
+      applyLimits(controls, limits);
+      applyPose(controls, pose);
+      inspectingRef.current = false;
+      controls.enabled = true;
+    };
+    if (activeRegion) {
+      setActiveRegion(null);
+      moveTo(pose, limits, arrive);
+      return;
+    }
+    transitionRef.current?.tween.kill();
+    transitionRef.current = null;
+    arrive();
   };
 
   return (
     <div
       className="relative h-full w-full"
       style={{ backgroundColor: BACKGROUND }}
-      onPointerDownCapture={finishIntro}
-      onWheelCapture={finishIntro}
+      onPointerDownCapture={onViewerInput}
+      onWheelCapture={onViewerInput}
     >
       <Canvas camera={{ position: [2, 1.5, 2.5], fov: 45 }}>
         <color attach="background" args={[BACKGROUND]} />
@@ -277,6 +474,8 @@ export function ProductScene({ labels, name, tagline }: ProductSceneProps) {
           <Model
             controlsRef={controlsRef}
             canonicalRef={canonicalRef}
+            productLimitsRef={productLimitsRef}
+            inspectingRef={inspectingRef}
             copyRef={copyRef}
             controlsUiRef={controlsUiRef}
             finishRef={finishRef}
@@ -289,7 +488,38 @@ export function ProductScene({ labels, name, tagline }: ProductSceneProps) {
       {/* Non-interactive copy: hidden until the reveal. */}
       <div ref={copyRef} className="invisible absolute top-4 inset-s-4 text-start opacity-0">
         <p className="text-lg font-medium text-neutral-900">{name}</p>
-        <p className="text-sm text-neutral-700">{tagline}</p>
+        {/* The tagline area carries the active region's copy while inspecting. */}
+        <p aria-live="polite" className="text-sm text-neutral-700">
+          {activeRegion ? (
+            <>
+              <span className="font-medium text-neutral-900">{activeRegion.name}</span> {activeRegion.description}
+            </>
+          ) : (
+            tagline
+          )}
+        </p>
+      </div>
+      {/* Below sm: its own row above the viewer controls (bottom-4 + 44px + gap).
+          From sm: same bottom edge, wrapping before the viewer controls (≤ 15rem). */}
+      <div
+        role="group"
+        aria-label={labels.focus.label}
+        className="absolute inset-x-4 bottom-17 flex flex-wrap gap-2 sm:inset-e-auto sm:bottom-4 sm:max-w-[calc(100%-15rem)]"
+      >
+        {regions.map((region) => {
+          const active = activeRegion?.id === region.id;
+          return (
+            <button
+              key={region.id}
+              type="button"
+              aria-pressed={active}
+              className={`${buttonClass} ${active ? "bg-neutral-900! text-white!" : ""}`}
+              onClick={() => selectRegion(region)}
+            >
+              {region.name}
+            </button>
+          );
+        })}
       </div>
       {/* Always focusable and operable; the intro only subdues its opacity. */}
       <div
@@ -304,15 +534,18 @@ export function ProductScene({ labels, name, tagline }: ProductSceneProps) {
           className={buttonClass}
           aria-label={labels.controls.zoomIn}
           onClick={() => {
-            finishIntro();
+            onViewerInput();
             zoomBy(0.8);
           }}
         >
           +
         </button>
-        <button type="button" className={buttonClass} aria-label={labels.controls.zoomOut}
+        <button
+          type="button"
+          className={buttonClass}
+          aria-label={labels.controls.zoomOut}
           onClick={() => {
-            finishIntro();
+            onViewerInput();
             zoomBy(1.25);
           }}
         >

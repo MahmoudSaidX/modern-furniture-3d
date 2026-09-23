@@ -20,6 +20,12 @@ export default async function Home() {
           labels={dict.scene}
           name={stockholmChair.name[locale]}
           tagline={stockholmChair.tagline[locale]}
+          regions={stockholmChair.focusRegions.map((r) => ({
+            id: r.id,
+            name: r.name[locale],
+            description: r.description[locale],
+            camera: r.camera,
+          }))}
         />
       </section>
 

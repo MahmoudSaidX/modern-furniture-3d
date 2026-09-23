@@ -73,3 +73,7 @@ Recorded, not fixed, in S0-06; the file is unchanged.
 | Compression       | none (no Meshopt, no KTX2)                                                                 | Deviation            |
 
 Remediation belongs to a later asset/optimization story (e.g. US-601).
+
+Because parts are not addressable, US-103's inspection regions are camera
+regions in product data (`focusRegions` in `src/data/products.ts`), not model
+parts. The addressable-parts deviation remains open.
