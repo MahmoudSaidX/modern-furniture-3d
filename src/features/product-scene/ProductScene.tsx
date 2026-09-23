@@ -1,8 +1,14 @@
 "use client";
 
-import { Suspense } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Suspense, useRef } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, OrbitControls, useGLTF, useProgress } from "@react-three/drei";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import type { Group } from "three";
+import type { OrbitControls as OrbitControlsImpl } from "three/addons/controls/OrbitControls.js";
+
+gsap.registerPlugin(useGSAP);
 
 const MODEL_URL = "/models/stockholm-chair.glb";
 
@@ -12,7 +18,32 @@ type ProductSceneProps = {
 
 function Model() {
   const { scene } = useGLTF(MODEL_URL);
-  return <primitive object={scene} />;
+  const groupRef = useRef<Group>(null);
+  // Set by <OrbitControls makeDefault />.
+  const controls = useThree((state) => state.controls) as OrbitControlsImpl | null;
+
+  // S0-07 lifecycle proof (mount → interrupt → cleanup), not final cinematics:
+  // the timeline plays on mount, is killed when the user starts orbiting, and
+  // useGSAP reverts it on unmount.
+  useGSAP(
+    () => {
+      if (!groupRef.current) return;
+      const tl = gsap.timeline();
+      tl.from(groupRef.current.rotation, { y: -Math.PI / 4 });
+
+      if (!controls) return;
+      const interrupt = () => tl.kill();
+      controls.addEventListener("start", interrupt);
+      return () => controls.removeEventListener("start", interrupt);
+    },
+    { dependencies: [controls], revertOnUpdate: true },
+  );
+
+  return (
+    <group ref={groupRef}>
+      <primitive object={scene} />
+    </group>
+  );
 }
 
 // DOM overlay: the 3D scene itself never holds text.

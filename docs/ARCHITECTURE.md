@@ -34,6 +34,8 @@ layers are committed.
   Drei (lower-level Three.js only when genuinely needed). First content:
   `ProductScene`, a development scene (camera, environment/lighting, model,
   orbit controls, localized DOM loading overlay).
+  Animation ownership, scene states and timeline rules are defined in
+  [`ANIMATION.md`](ANIMATION.md).
 - **Public 3D assets** (`public/models/`) — GLB models served by Next.js as
   static files (first: `stockholm-chair.glb`). Asset conventions (naming,
   customizable parts, scale/origin, optimization) are defined in
