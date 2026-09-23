@@ -24,6 +24,9 @@ const ar = {
       zoomOut: "تصغير",
       reset: "إعادة ضبط العرض",
     },
+    focus: {
+      label: "تفاصيل المنتج",
+    },
   },
 } satisfies Dictionary;
 
