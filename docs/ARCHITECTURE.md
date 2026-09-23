@@ -35,7 +35,9 @@ layers are committed.
   `ProductScene`, a development scene (camera, environment/lighting, model,
   orbit controls, localized DOM loading overlay).
 - **Public 3D assets** (`public/models/`) — GLB models served by Next.js as
-  static files (first: `stockholm-chair.glb`).
+  static files (first: `stockholm-chair.glb`). Asset conventions (naming,
+  customizable parts, scale/origin, optimization) are defined in
+  [`3D-ASSETS.md`](3D-ASSETS.md).
 - **Development routes** (`src/app/[lang]/dev/`) — developer-only pages
   (first: `dev/scene`); they call `notFound()` in production builds.
 
