@@ -7,6 +7,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import type { Group } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three/addons/controls/OrbitControls.js";
+import { useExperienceStore } from "@/state/experience-store";
 
 gsap.registerPlugin(useGSAP);
 
@@ -21,13 +22,15 @@ function Model() {
   const groupRef = useRef<Group>(null);
   // Set by <OrbitControls makeDefault />.
   const controls = useThree((state) => state.controls) as OrbitControlsImpl | null;
+  const sceneState = useExperienceStore((state) => state.sceneState);
 
   // S0-07 lifecycle proof (mount → interrupt → cleanup), not final cinematics:
-  // the timeline plays on mount, is killed when the user starts orbiting, and
-  // useGSAP reverts it on unmount.
+  // the timeline plays on mount in the PRODUCT scene state (read from the
+  // shared store), is killed when the user starts orbiting, and useGSAP
+  // reverts it on unmount.
   useGSAP(
     () => {
-      if (!groupRef.current) return;
+      if (!groupRef.current || sceneState !== "PRODUCT") return;
       const tl = gsap.timeline();
       tl.from(groupRef.current.rotation, { y: -Math.PI / 4 });
 
@@ -36,7 +39,7 @@ function Model() {
       controls.addEventListener("start", interrupt);
       return () => controls.removeEventListener("start", interrupt);
     },
-    { dependencies: [controls], revertOnUpdate: true },
+    { dependencies: [controls, sceneState], revertOnUpdate: true },
   );
 
   return (
