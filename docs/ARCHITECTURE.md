@@ -42,6 +42,16 @@ layers are committed.
   [`3D-ASSETS.md`](3D-ASSETS.md).
 - **Development routes** (`src/app/[lang]/dev/`) — developer-only pages
   (first: `dev/scene`); they call `notFound()` in production builds.
+- **Lightweight shared state** (`src/state/`) — Zustand stores for
+  genuinely shared client state (first: `experience-store.ts`, holding
+  `sceneState` and `selectedProductId`). Stores hold domain values and
+  intent only — never Three.js/R3F objects, controls, refs or GSAP
+  timelines. Local UI state stays in its component (`useState`/refs); don't
+  globalize it. Configuration, lighting, cart and other domains are added by
+  their owning stories when real requirements exist. A shared module store
+  fits today's client-only needs; revisit it (e.g. a provider/per-request
+  store) when server-derived or request-specific initialization is required.
+  No Redux.
 
 ## Direction (RTL/LTR)
 
@@ -80,11 +90,6 @@ layers are committed.
   environment (e.g. a room). Not implemented yet. When introduced, it stays a
   distinct module from the Product Scene rather than merged into one generic
   "3D" folder.
-- **Lightweight shared state** — cross-component client state (e.g. a
-  configurator's selected options). Its own conceptual boundary, distinct
-  from shared helpers/modules. Physical structure and naming are
-  intentionally deferred to S0-08, when the actual state requirements and
-  tooling are introduced.
 
 ## Deliberately undecided
 

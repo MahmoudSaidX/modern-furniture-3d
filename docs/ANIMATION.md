@@ -12,12 +12,12 @@ directly.
 
 ## Ownership
 
-| Layer       | Owns                                                                                                                                                               |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **React**   | Component lifecycle: which scenes and overlays are mounted, and therefore when a timeline exists. Unmounting a component ends its timelines.                       |
-| **R3F**     | The three.js scene graph, render loop, per-frame work (`useFrame`) and controls. It owns the objects (camera, model groups, lights) that timelines animate.        |
-| **GSAP**    | Time-based interpolation of values on those objects through small explicit timelines: camera/target, model transform, environment/lighting, and DOM UI reveal.     |
-| **Zustand** | _Introduced in S0-08; not installed yet._ The current scene state and user selections. Timelines react to state changes; they never own or store state themselves. |
+| Layer       | Owns                                                                                                                                                           |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **React**   | Component lifecycle: which scenes and overlays are mounted, and therefore when a timeline exists. Unmounting a component ends its timelines.                   |
+| **R3F**     | The three.js scene graph, render loop, per-frame work (`useFrame`) and controls. It owns the objects (camera, model groups, lights) that timelines animate.    |
+| **GSAP**    | Time-based interpolation of values on those objects through small explicit timelines: camera/target, model transform, environment/lighting, and DOM UI reveal. |
+| **Zustand** | The current scene state and user selections (`src/state/experience-store.ts`). Timelines react to state changes; they never own or store state themselves.     |
 
 - **One writer per property at a time.** While a timeline tweens a property,
   nothing else (`useFrame`, controls, React props) writes that property.
@@ -36,9 +36,10 @@ a TypeScript contract (`SCENE_STATES`, `SceneState`):
 | `CUSTOMIZE` | Configuring product options.          |
 | `CONTEXT`   | The product placed in an environment. |
 
-This is a contract only: no state-machine framework, no store, no
-transitions. Where the current state is stored (Zustand, S0-08) and how each
-transition animates are defined by the stories that use them.
+This is a contract only: no state-machine framework and no transitions. The
+current state is stored as `sceneState` in the shared Zustand store
+(`src/state/experience-store.ts`); how each transition animates is defined
+by the stories that use them.
 
 ## Timeline rules
 
@@ -58,7 +59,7 @@ transition animates are defined by the stories that use them.
 ## Current implementation
 
 `ProductScene` (development scene) contains a lifecycle proof only: one
-timeline that rotates the model into place on mount, is killed when
-OrbitControls fires `start`, and is reverted on unmount. Its values (GSAP
-default duration and ease) are placeholders, not final choreography, camera
-behavior or animation UX.
+timeline that rotates the model into place on mount while `sceneState` is
+`PRODUCT`, is killed when OrbitControls fires `start`, and is reverted on
+unmount. Its values (GSAP default duration and ease) are placeholders, not
+final choreography, camera behavior or animation UX.
