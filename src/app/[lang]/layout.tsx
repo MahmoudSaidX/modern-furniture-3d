@@ -39,6 +39,8 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
       lang={locale}
       dir={localeDirections[locale]}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // Browser extensions (e.g. LanguageTool) inject attributes on <html> before hydration.
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
         <LanguageSwitcher currentLocale={locale} label={dict.switcher.label} />
