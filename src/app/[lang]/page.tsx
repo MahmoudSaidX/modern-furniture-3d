@@ -16,7 +16,11 @@ export default async function Home() {
       </section>
 
       <section className="h-[60vh] w-full max-w-5xl sm:h-[70vh]">
-        <ProductScene labels={dict.scene} />
+        <ProductScene
+          labels={dict.scene}
+          name={stockholmChair.name[locale]}
+          tagline={stockholmChair.tagline[locale]}
+        />
       </section>
 
       <article>

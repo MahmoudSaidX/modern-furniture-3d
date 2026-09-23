@@ -58,5 +58,25 @@ by the stories that use them.
 
 ## Current implementation
 
-No timelines exist yet. The S0-07 lifecycle proof in `ProductScene` was
-removed in US-101; the cinematic product introduction belongs to US-102.
+US-102's cinematic product introduction is the only timeline. It lives in
+`CinematicIntro` in `ProductScene.tsx`:
+
+- It starts after the GLB has loaded, because it sits inside the model's
+  `Suspense`. Over 3 s the camera moves from a wide pose to the canonical
+  framing, then the product name/tagline fade in and the subdued controls
+  return to full opacity.
+- **Camera ownership:** while it runs, `controls.enabled = false`. OrbitControls
+  input and Drei's per-frame `update()` both stop, so GSAP is the only writer
+  of the camera.
+- **Interruption:** pointer, touch or wheel input on the viewer, or focusing or
+  activating Zoom In/Zoom Out/Reset View, calls `finish()`. DOM capture
+  listeners detect the input. `finish()` kills the timeline, applies the
+  canonical pose, reveals the UI and re-enables the controls. The skip is not
+  animated.
+- **Reduced motion:** with `prefers-reduced-motion: reduce`, the intro is
+  skipped and the scene starts at the canonical pose with the final UI.
+- **Once per mount:** the intro plays at most once per mount.
+- **One final pose:** intro completion, skip, reduced motion and Reset View all
+  use `applyPose`, so they always produce the same view.
+- **Controls stay usable:** the controls stay focusable and operable
+  throughout; only their opacity is reduced.

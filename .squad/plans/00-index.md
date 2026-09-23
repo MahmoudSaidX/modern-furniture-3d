@@ -11,3 +11,4 @@ One row per feature folder under `.squad/plans/`. `NN` continues as a global exe
 | spec-workflow | [00-overview.md](spec-workflow/00-overview.md) | 05 |
 | planning-workflow | [00-overview.md](planning-workflow/00-overview.md) | 06 |
 | interactive-product | [00-overview.md](interactive-product/00-overview.md) | 07 |
+| cinematic-intro | [00-overview.md](cinematic-intro/00-overview.md) | 08 |
