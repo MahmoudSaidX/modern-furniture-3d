@@ -76,10 +76,11 @@ committed and needs no `.gitignore` change). Update it at the end of every stage
 story: <LINEAR-ID> — <title>
 type: feat|fix|chore|docs|refactor|test
 branch: <branch or "-">
-status: in-progress | blocked | awaiting-merge-approval
+status: in-progress | blocked | awaiting-plan-approval | awaiting-merge-approval
 stage: <last completed stage number>
 spec: <.squad/stories/<feature>/<LINEAR-ID>/intake.md>
 plan: <.squad/plans/<feature>/NN-story-<LINEAR-ID>.md>
+approval: <"-" or "approved — <date>, <verbatim reply>">
 decisions:
 
 - <stage>: <question> → <human answer, verbatim>
@@ -100,7 +101,10 @@ On `resume`:
 3. Re-verify cheaply: correct branch checked out, working tree matches what the stage left,
    spec/plan files still exist. Do not redo completed stages. If the decision changes an earlier
    artifact (e.g. the spec), update only that artifact and the stages that depend on it.
-4. Continue from the stage after `stage`.
+4. If `status: awaiting-plan-approval`, only the exact decision `approved` releases it: record
+   it under `approval` and continue to Stage 6. Any other text is a change request — update the
+   plan (and the intake if needed), rerun the Stage 4 checks and repeat Stage 5.
+5. Otherwise continue from the stage after `stage`.
 
 Every recorded decision is binding for the rest of the run — do not re-ask it.
 
@@ -183,7 +187,7 @@ project, is not Done/Canceled, and that its blockers are Done. Any failure → g
    the intake path as its argument. It points to the meta-prompt `generate-plan.md` inside the
    installed package (`$(npm root -g)/squad-kit/templates/prompts/`) — read it in full and
    follow it. **Never use `squad new-plan --api`** (or `--copy`) in this workflow.
-2. Before accepting the plan, read the relevant existing implementation, previous plans under
+2. Repo analysis — before accepting the plan, read the relevant existing implementation, previous plans under
    `.squad/plans/`, `CLAUDE.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`, and the local docs for
    every framework/library the plan touches (`node_modules/<pkg>/…`, especially Next.js).
 3. Check the plan against Linear and the intake: every acceptance criterion covered, nothing
@@ -191,25 +195,48 @@ project, is not Done/Canceled, and that its blockers are Done. Any failure → g
    speculative abstractions, premature infrastructure, placeholders for future stories, empty
    directories and unrelated refactors. If striking them changes what the plan delivers, the
    plan leaves a choice open, or it proposes any new dependency → gate.
-4. The written plan (`.squad/plans/<feature-slug>/NN-story-<LINEAR-ID>.md`, plus the updated
+4. Check the plan against **Required plan coverage** in `docs/SPEC-STANDARD.md`: every area is
+   covered or says `Not applicable — <reason>` (no filler), and a plan touching the scene or
+   cinematics names camera, model/assets, environment, lighting and timelines. Fix a missing
+   area in the plan; if that needs a decision → gate.
+5. The written plan (`.squad/plans/<feature-slug>/NN-story-<LINEAR-ID>.md`, plus the updated
    `00-overview.md` and `00-index.md`) is the implementation's source of truth from here on.
    Treat it as read-only in later stages; changing it needs a gate. Record the plan path
    (`stage: 4`).
 
-## Stage 5 — Branch
+## Stage 5 — Plan approval (mandatory)
+
+Separate from the Decision Gate, and runs even when nothing is ambiguous. No branch, code,
+commit or PR before approval. Set `status: awaiting-plan-approval` (`stage: 4` stays), reply with
+exactly these sections, then end the turn:
+
+```md
+## ✋ Plan approval required — <LINEAR-ID>
+
+Scope · Expected files · Implementation approach · State · 3D impact · RTL/LTR · Performance ·
+Verification/tests · Risks · Out of scope · Deferred work
+
+### To approve
+
+/next-story resume <LINEAR-ID> approved
+```
+
+On approval (see **Resume**) record `approval` and set `stage: 5`.
+
+## Stage 6 — Branch
 
 From the freshly pulled `main`: `git checkout -b <type>/<linear-id-lowercase>-<short-kebab>`
 (e.g. `feat/3dmodel-18-establish-3d-foundation`). If the branch already exists locally or on
-`origin` → gate. Never implement on `main`. Record it (`stage: 5`).
+`origin` → gate. Never implement on `main`. Record it (`stage: 6`).
 
-## Stage 6 — Implementation
+## Stage 7 — Implementation
 
 Implement only the approved spec and plan, following the project rules above (architecture,
 localization dictionaries, logical-property RTL, accessibility, performance, 3D boundaries and
 "3D is never mirrored"). Any point where the plan is silent, wrong, or would need to change →
-gate. Record progress in `notes` so a resume can pick up mid-stage (`stage: 6` when done).
+gate. Record progress in `notes` so a resume can pick up mid-stage (`stage: 7` when done).
 
-## Stage 7 — Verification
+## Stage 8 — Verification
 
 Run every applicable check, reading `package.json` for what exists (today: `npm run lint`,
 `npx tsc --noEmit`, `npm run build`; also any test or static-check scripts added since).
@@ -223,32 +250,37 @@ Then story-specific verification:
 
 Fix story-related defects and rerun the affected checks. A fix that needs a new decision or
 extra scope → gate. Anything that cannot be verified here goes into "Deferred verification".
-Record results (`stage: 7`).
+Record results (`stage: 8`).
 
-## Stage 8 — Final diff review
+## Stage 9 — Final diff review
 
 Review `git diff main...HEAD` plus untracked files for: acceptance-criteria coverage, scope creep,
 unrelated changes, dead/debug code, generated files (`.next/`, `tsconfig.tsbuildinfo`,
 `next-env.d.ts` churn, `.squad/runs/`), secrets, architecture violations, localization and RTL issues,
 accessibility, performance, and 3D lifecycle/resource cleanup. Fix what is in scope; otherwise
-gate (`stage: 8`).
+gate.
 
-## Stage 9 — Commit
+Then the acceptance-criteria review (`docs/SPEC-STANDARD.md`): a table marking every Linear
+acceptance criterion PASS / FAIL / DEFERRED with evidence. A FAIL is never reported as
+completion — fix it within approved scope and rerun the affected checks, or gate if a fix needs
+a new decision or scope change. Record the table in `notes` (`stage: 9`).
 
-Only if every check passes and no decision is open. Stage story files explicitly by path (never
+## Stage 10 — Commit
+
+Only if every check passes, no acceptance criterion is FAIL, and no decision is open. Stage story files explicitly by path (never
 `git add -A` / `.`), including the Squad intake, plan, and the updated `00-overview.md` /
 `00-index.md`. Squad runtime files (`.squad/runs/`, `.last-*`, `secrets.yaml`, `attachments/`) are
 git-ignored by squad-kit and must stay uncommitted. Commit as `<type>(<LINEAR-ID>): <imperative summary>`, e.g.
-`feat(3DMODEL-18): establish 3D technology foundation` (`stage: 9`).
+`feat(3DMODEL-18): establish 3D technology foundation` (`stage: 10`).
 
-## Stage 10 — Pull request
+## Stage 11 — Pull request
 
 `git push -u origin <branch>`, then `gh pr create --base main` with a body containing:
 
 - Linear story (ID, title, link)
 - Summary
 - Implementation
-- Acceptance criteria — each one with ✅ / ⚠️ and how it was verified
+- Acceptance criteria — the AC review table (PASS / FAIL / DEFERRED with evidence)
 - Verification — every check run and its result
 - Deferred verification
 - Known limitations
@@ -256,10 +288,10 @@ git-ignored by squad-kit and must stay uncommitted. Commit as `<type>(<LINEAR-ID
 - Scope — explicit confirmation that unrelated scope was excluded
 
 **Never merge the PR, enable auto-merge, or approve it.** Set `status: awaiting-merge-approval`
-(`stage: 10`).
+(`stage: 11`).
 
-## Stage 11 — Completion report
+## Stage 12 — Completion report
 
 Reply with: story ID/title, Squad spec path, Squad plan path, branch, commit SHA, PR number/URL,
-implementation summary, verification results, acceptance-criteria status, deferred
+implementation summary, verification results, acceptance-criteria review table, deferred
 verification, final `git status`, observations. Then stop and wait for PR/merge approval.
