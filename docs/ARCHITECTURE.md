@@ -35,8 +35,9 @@ layers are committed.
   the customer-facing Product Studio rendered on `/[lang]`: neutral studio
   lighting and contact shadows, a constrained orbit camera framed from the
   model's bounds, and localized DOM overlays (loading state, Zoom In/Zoom
-  Out/Reset View controls). Camera state stays in the controls and component
-  refs — never in Zustand.
+  Out/Reset View controls, product name/tagline). A short, interruptible
+  cinematic intro plays once the model loads (see `ANIMATION.md`). Camera
+  state stays in the controls and component refs — never in Zustand.
   Animation ownership, scene states and timeline rules are defined in
   [`ANIMATION.md`](ANIMATION.md).
 - **Public 3D assets** (`public/models/`) — GLB models served by Next.js as

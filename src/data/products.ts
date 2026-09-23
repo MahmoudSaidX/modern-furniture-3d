@@ -5,6 +5,7 @@ export type Product = {
   id: string;
   name: LocalizedText;
   description: LocalizedText;
+  tagline: LocalizedText;
 };
 
 export const stockholmChair: Product = {
@@ -16,5 +17,9 @@ export const stockholmChair: Product = {
   description: {
     en: "A modern chair you can explore in 3D.",
     ar: "كرسي عصري يمكنك استكشافه بتقنية ثلاثية الأبعاد.",
+  },
+  tagline: {
+    en: "Designed for quiet moments.",
+    ar: "صُمم للحظات الهادئة.",
   },
 };
