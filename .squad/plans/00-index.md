@@ -5,3 +5,4 @@ One row per feature folder under `.squad/plans/`. `NN` continues as a global exe
 | Feature | Overview | NN range |
 |---------|----------|----------|
 | 3d-foundation | [00-overview.md](3d-foundation/00-overview.md) | 01 |
+| 3d-asset-standards | [00-overview.md](3d-asset-standards/00-overview.md) | 02 |
