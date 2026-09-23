@@ -1,0 +1,23 @@
+import type { Dictionary } from "./en";
+
+const ar = {
+  meta: {
+    title: "مودرن فرنيتشر ثري دي",
+    description: "استكشف الأثاث العصري بتقنية ثلاثية الأبعاد.",
+  },
+  switcher: {
+    label: "تغيير اللغة",
+  },
+  home: {
+    title: "مودرن فرنيتشر ثري دي",
+    featuredProduct: "منتج مميز",
+  },
+  scene: {
+    overlay: {
+      headline: "مصمم ليُرى من كل زاوية",
+      caption: "مرّر للاستكشاف",
+    },
+  },
+} satisfies Dictionary;
+
+export default ar;

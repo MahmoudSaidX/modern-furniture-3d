@@ -8,16 +8,32 @@ layers are committed.
 ## Established
 
 - **Routes** — `src/app/` (Next.js App Router). All routes, layouts, and route
-  handlers live here.
+  handlers live here. Every route is nested under `src/app/[lang]/`, whose
+  layout is the root layout; `/` redirects (temporarily) to the default
+  locale `/en` via `next.config.ts`. Unsupported locales return 404.
+- **Localization** (`src/i18n/`) — `config.ts` holds the supported locales,
+  default locale, per-locale document direction, and `hasLocale()`.
+  `dictionaries/` holds one typed dictionary per locale (`en.ts` defines the
+  `Dictionary` shape; other locales must satisfy it). `get-dictionary.ts`
+  resolves the locale from the `[lang]` root param (server-only). One
+  page/layout implementation serves every locale — no language-specific
+  components. `<html>` gets `lang` and `dir`; RTL layout behavior is out of
+  scope here (S0-04).
+- **Reusable UI** (`src/components/`) — presentational components shared
+  across routes (first: `LanguageSwitcher`, rendered by the root layout).
+- **Static/local product data** (`src/data/`) — hardcoded product definitions.
+  User-facing text is `LocalizedText` (one string per locale); internal
+  IDs (product, mesh, material, asset) are never translated.
+- **Scene copy rule** — cinematic overlay copy lives in the dictionaries
+  (`scene.overlay`), not in scene code. No 3D scene exists yet; when one is
+  introduced, it must not contain user-facing text — overlay copy is rendered
+  as localized DOM over it, so one scene/timeline serves all locales.
 
 ## Intended (not yet created)
 
 - **Feature code** (`src/features/`) — feature-scoped logic that isn't a
   route itself (e.g. a checkout flow's non-UI logic). Created with the first
   feature that needs isolation from its route.
-- **Reusable UI** (`src/components/`) — presentational components shared
-  across more than one route or feature. Created with the first component
-  that's actually reused.
 - **Three.js / scene code** — 3D rendering logic, split into two separate
   conceptual boundaries:
   - **Product Scene** — 3D rendering for individual product configuration/viewing.
@@ -25,18 +41,11 @@ layers are committed.
     environment (e.g. a room).
   Neither scene is implemented yet. When introduced, each should remain a
   distinct module rather than merged into one generic "3D" folder.
-- **Localization** — translation strings and locale routing/config. Directory
-  name and structure (e.g. `src/i18n/` vs. `messages/`) to be decided by the
-  story that introduces localization.
 - **Lightweight shared state** — cross-component client state (e.g. a
   configurator's selected options). Its own conceptual boundary, distinct
   from shared helpers/modules. Physical structure and naming are
   intentionally deferred to S0-08, when the actual state requirements and
   tooling are introduced.
-- **Static/local product data** (`src/data/`) — hardcoded/local product
-  definitions used before a real data source exists. Preferred future
-  location is `src/data/`, but it is only created once a story has actual
-  product data to place there (e.g. S0-02 does not).
 - **Public 3D assets** — models, textures, and other static 3D assets served
   by Next.js. These belong under `public/` (Next.js's static asset
   convention), in a clearly named subfolder (e.g. `public/models/`) that will
