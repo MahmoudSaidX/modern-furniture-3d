@@ -45,7 +45,7 @@ As a customer, I want a short cinematic introduction so the product feels premiu
 
 ## Business Rules
 
-* Never create a blocking intro.
+- Never create a blocking intro.
 
 ## RTL/LTR
 
@@ -61,12 +61,12 @@ Minimal environment → product reveal → subtle camera/model movement → fina
 ## Acceptance criteria
 
 ```md
-* Reveal after required assets are ready
-* wide-to-final camera move
-* coordinated UI reveal
-* interruptible
-* approximately 2–4 seconds
-* reduced-motion considered.
+- Reveal after required assets are ready
+- wide-to-final camera move
+- coordinated UI reveal
+- interruptible
+- approximately 2–4 seconds
+- reduced-motion considered.
 ```
 
 ---
@@ -82,6 +82,7 @@ From Linear: "Minimal environment → product reveal → subtle camera/model mov
 ## Cinematic requirements
 
 From Linear: wide-to-final camera move, approximately 2–4 seconds, reveal after required assets are ready, coordinated UI reveal, interruptible, never blocking. Per decision:
+
 - Choreography stays inside the Product Scene boundary; only the scene overlay is animated/revealed, not the page-level heading/caption.
 - Interruption = pointer/touch interaction, wheel interaction, OrbitControls interaction start, or activation of Zoom In, Zoom Out or Reset View. On interruption: kill the intro timeline, immediately apply the canonical final camera state, reveal the final UI, hand control to the user; no intermediate freeze, the skip itself is not animated.
 - The intro does not restart during the same mount.
