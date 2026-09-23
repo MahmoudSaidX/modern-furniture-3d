@@ -8,3 +8,4 @@ One row per feature folder under `.squad/plans/`. `NN` continues as a global exe
 | 3d-asset-standards | [00-overview.md](3d-asset-standards/00-overview.md) | 02 |
 | animation-architecture | [00-overview.md](animation-architecture/00-overview.md) | 03 |
 | shared-state | [00-overview.md](shared-state/00-overview.md) | 04 |
+| spec-workflow | [00-overview.md](spec-workflow/00-overview.md) | 05 |

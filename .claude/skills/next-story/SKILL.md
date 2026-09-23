@@ -17,7 +17,8 @@ Arguments: `$ARGUMENTS`
 Project rules are not repeated here. Before any stage that reads or writes code, follow
 `CLAUDE.md` / `AGENTS.md` (read the relevant guide in `node_modules/next/dist/docs/` before
 writing Next.js code) and `docs/ARCHITECTURE.md` (boundaries, localization, RTL/LTR, 3D rules,
-just-in-time directories). Those files win over anything assumed here.
+just-in-time directories) and `docs/SPEC-STANDARD.md` (spec locations, rules, required
+sections). Those files win over anything assumed here.
 
 ---
 
@@ -166,11 +167,14 @@ project, is not Done/Canceled, and that its blockers are Done. Any failure → g
      verbatim under Description or Extra notes, labelled by source.
    - Dependencies — Linear blockers/relations with their status.
    - Out of scope — only what Linear states or a recorded decision says. Never invent it.
+   - Required sections — add every section from `docs/SPEC-STANDARD.md` the template lacks.
+     Use `Not applicable — <reason>` only when a section genuinely does not apply; unknown or
+     ambiguous → gate.
    - Attachments: save relevant Linear attachments under `attachments/` (git-ignored by
      squad-kit) and list them. If an attachment is needed for the plan but can't be retrieved →
      gate.
-3. Review the intake against Linear, `docs/ARCHITECTURE.md` and recorded decisions. Nothing may
-   appear in it that Linear doesn't say. A gap you would have to fill yourself → gate.
+3. Review the intake against Linear, `docs/ARCHITECTURE.md`, `docs/SPEC-STANDARD.md` and
+   recorded decisions. Nothing may appear in it that Linear doesn't say. A gap you would have to fill yourself → gate.
 4. Record the intake path as `spec` (`stage: 3`).
 
 ## Stage 4 — Squad plan
