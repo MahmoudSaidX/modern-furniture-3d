@@ -38,9 +38,10 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
     <html
       lang={locale}
       dir={localeDirections[locale]}
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <LanguageSwitcher currentLocale={locale} label={dict.switcher.label} />
         {children}
       </body>
