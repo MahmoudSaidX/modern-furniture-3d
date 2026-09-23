@@ -17,8 +17,7 @@ layers are committed.
   `Dictionary` shape; other locales must satisfy it). `get-dictionary.ts`
   resolves the locale from the `[lang]` root param (server-only). One
   page/layout implementation serves every locale — no language-specific
-  components. `<html>` gets `lang` and `dir`; RTL layout behavior is out of
-  scope here (S0-04).
+  components. `<html>` gets `lang` and `dir` (see Direction, below).
 - **Reusable UI** (`src/components/`) — presentational components shared
   across routes (first: `LanguageSwitcher`, rendered by the root layout).
 - **Static/local product data** (`src/data/`) — hardcoded product definitions.
@@ -28,6 +27,37 @@ layers are committed.
   (`scene.overlay`), not in scene code. No 3D scene exists yet; when one is
   introduced, it must not contain user-facing text — overlay copy is rendered
   as localized DOM over it, so one scene/timeline serves all locales.
+
+## Direction (RTL/LTR)
+
+- **Inherited, not re-implemented.** Direction comes only from `<html dir>`
+  (`localeDirections` in `src/i18n/config.ts`); components inherit it. There
+  are no separate Arabic components and no locale branches for layout.
+- **Logical properties.** Use CSS logical properties and Tailwind's logical
+  utilities (`ms-`/`me-`, `ps-`/`pe-`, `start-`/`end-`, `text-start`/`text-end`,
+  `border-s`/`border-e`, `rounded-s`/`rounded-e`) instead of left/right
+  equivalents. Enforced by review, not tooling.
+- **No faked RTL.** Don't reverse DOM order or use `flex-row-reverse`/`order-*`
+  to simulate RTL; flex/grid already follow `dir`, and DOM order keeps focus
+  order matching visual order.
+- **Mixed-direction content.** Inline content in another language gets its own
+  `lang` (and `dir` when its direction differs), e.g. the language switcher
+  links. Wrap embedded opposite-direction or dynamic runs (product codes,
+  user text) in `<bdi>` or an element with `dir="auto"`.
+- **Directional icons and interactions.** Icons that encode direction
+  (back/next arrows, chevrons) flip in RTL (e.g. `rtl:-scale-x-100`);
+  symmetric icons don't. Arrow-key and swipe semantics in sliders, carousels
+  and tabs follow reading direction.
+- **Future feature verification.** Navigation, product, configurator and cart
+  stories must verify their layout and interactions in both `/en` and `/ar`
+  (including responsive widths) when those features are built.
+- **3D is never mirrored.** The 3D world — canvas, camera coordinates and
+  paths, lighting, geometry, models, animation paths — is identical for every
+  locale; scene code must not read `dir` or the locale, and the canvas must
+  not be flipped by transforms. Only DOM overlays above it follow document
+  direction.
+- **Undecided.** Arabic typography (currently system fallback) and digit
+  style for numbers/prices are deferred to the stories that need them.
 
 ## Intended (not yet created)
 

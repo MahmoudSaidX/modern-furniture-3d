@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { locales, localeNames, type Locale } from "@/i18n/config";
+import { localeDirections, locales, localeNames, type Locale } from "@/i18n/config";
 
 type LanguageSwitcherProps = {
   currentLocale: Locale;
@@ -24,7 +24,13 @@ export function LanguageSwitcher({ currentLocale, label }: LanguageSwitcherProps
       {locales
         .filter((locale) => locale !== currentLocale)
         .map((locale) => (
-          <Link key={locale} href={hrefFor(locale)} hrefLang={locale} lang={locale}>
+          <Link
+            key={locale}
+            href={hrefFor(locale)}
+            hrefLang={locale}
+            lang={locale}
+            dir={localeDirections[locale]}
+          >
             {localeNames[locale]}
           </Link>
         ))}
