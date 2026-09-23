@@ -23,10 +23,21 @@ layers are committed.
 - **Static/local product data** (`src/data/`) — hardcoded product definitions.
   User-facing text is `LocalizedText` (one string per locale); internal
   IDs (product, mesh, material, asset) are never translated.
-- **Scene copy rule** — cinematic overlay copy lives in the dictionaries
-  (`scene.overlay`), not in scene code. No 3D scene exists yet; when one is
-  introduced, it must not contain user-facing text — overlay copy is rendered
-  as localized DOM over it, so one scene/timeline serves all locales.
+- **Scene copy rule** — scene copy lives in the dictionaries (`scene.*`),
+  not in scene code. The 3D scene must not contain user-facing text — copy
+  (overlay, loading state) is rendered as localized DOM over it, so one
+  scene/timeline serves all locales.
+- **Feature code** (`src/features/`) — feature-scoped code that isn't a
+  route itself, one folder per feature (first: `product-scene/`).
+- **Product Scene** (`src/features/product-scene/`) — 3D rendering for
+  individual product viewing/configuration, built on React Three Fiber and
+  Drei (lower-level Three.js only when genuinely needed). First content:
+  `ProductScene`, a development scene (camera, environment/lighting, model,
+  orbit controls, localized DOM loading overlay).
+- **Public 3D assets** (`public/models/`) — GLB models served by Next.js as
+  static files (first: `stockholm-chair.glb`).
+- **Development routes** (`src/app/[lang]/dev/`) — developer-only pages
+  (first: `dev/scene`); they call `notFound()` in production builds.
 
 ## Direction (RTL/LTR)
 
@@ -61,25 +72,15 @@ layers are committed.
 
 ## Intended (not yet created)
 
-- **Feature code** (`src/features/`) — feature-scoped logic that isn't a
-  route itself (e.g. a checkout flow's non-UI logic). Created with the first
-  feature that needs isolation from its route.
-- **Three.js / scene code** — 3D rendering logic, split into two separate
-  conceptual boundaries:
-  - **Product Scene** — 3D rendering for individual product configuration/viewing.
-  - **Context Scene** — 3D rendering for placing/viewing products in an
-    environment (e.g. a room).
-  Neither scene is implemented yet. When introduced, each should remain a
-  distinct module rather than merged into one generic "3D" folder.
+- **Context Scene** — 3D rendering for placing/viewing products in an
+  environment (e.g. a room). Not implemented yet. When introduced, it stays a
+  distinct module from the Product Scene rather than merged into one generic
+  "3D" folder.
 - **Lightweight shared state** — cross-component client state (e.g. a
   configurator's selected options). Its own conceptual boundary, distinct
   from shared helpers/modules. Physical structure and naming are
   intentionally deferred to S0-08, when the actual state requirements and
   tooling are introduced.
-- **Public 3D assets** — models, textures, and other static 3D assets served
-  by Next.js. These belong under `public/` (Next.js's static asset
-  convention), in a clearly named subfolder (e.g. `public/models/`) that will
-  be documented here when the first asset is added.
 
 ## Deliberately undecided
 

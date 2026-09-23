@@ -17,6 +17,7 @@ const ar = {
       headline: "مصمم ليُرى من كل زاوية",
       caption: "مرّر للاستكشاف",
     },
+    loading: "جارٍ تحميل النموذج ثلاثي الأبعاد…",
   },
 } satisfies Dictionary;
 

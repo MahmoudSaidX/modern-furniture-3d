@@ -1,0 +1,51 @@
+"use client";
+
+import { Suspense } from "react";
+import { Canvas } from "@react-three/fiber";
+import { Environment, Lightformer, OrbitControls, useGLTF, useProgress } from "@react-three/drei";
+
+const MODEL_URL = "/models/stockholm-chair.glb";
+
+type ProductSceneProps = {
+  loadingLabel: string;
+};
+
+function Model() {
+  const { scene } = useGLTF(MODEL_URL);
+  return <primitive object={scene} />;
+}
+
+// DOM overlay: the 3D scene itself never holds text.
+function LoadingOverlay({ label }: { label: string }) {
+  const { active } = useProgress();
+  if (!active) return null;
+
+  return (
+    <p role="status" className="absolute inset-0 grid place-items-center">
+      {label}
+    </p>
+  );
+}
+
+// The scene is identical for every locale: it never reads `dir` or the locale.
+export function ProductScene({ loadingLabel }: ProductSceneProps) {
+  return (
+    <div className="relative h-full w-full">
+      <Canvas camera={{ position: [2, 1.5, 2.5], fov: 45 }}>
+        <ambientLight intensity={0.4} />
+        <directionalLight position={[3, 5, 2]} intensity={1.5} />
+        {/* Local lightformers instead of a preset, which would fetch an HDR from a CDN. */}
+        <Environment resolution={256}>
+          <Lightformer intensity={2} position={[0, 5, -5]} scale={[10, 5, 1]} />
+          <Lightformer intensity={1} position={[-5, 1, 0]} rotation-y={Math.PI / 2} scale={[10, 2, 1]} />
+          <Lightformer intensity={1} position={[5, 1, 0]} rotation-y={-Math.PI / 2} scale={[10, 2, 1]} />
+        </Environment>
+        <Suspense fallback={null}>
+          <Model />
+        </Suspense>
+        <OrbitControls makeDefault />
+      </Canvas>
+      <LoadingOverlay label={loadingLabel} />
+    </div>
+  );
+}

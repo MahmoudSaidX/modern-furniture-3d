@@ -17,6 +17,7 @@ const en = {
       headline: "Designed to be seen from every angle",
       caption: "Scroll to explore",
     },
+    loading: "Loading 3D model…",
   },
 };
 
