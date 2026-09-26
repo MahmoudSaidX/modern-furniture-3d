@@ -26,6 +26,8 @@ export default async function Home() {
             description: r.description[locale],
             camera: r.camera,
           }))}
+          colorMaterial={stockholmChair.colorMaterial}
+          colors={stockholmChair.colors.map((c) => ({ id: c.id, name: c.name[locale], hex: c.hex }))}
         />
       </section>
 

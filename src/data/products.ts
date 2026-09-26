@@ -33,6 +33,14 @@ export type FocusRegion = {
   camera: FocusCamera;
 };
 
+export type ProductColor = {
+  // Stable internal identifier; never translated.
+  id: "sand" | "olive" | "terracotta" | "charcoal";
+  name: LocalizedText;
+  // sRGB hex; tints the texture (multiplied), so the render is not an exact match.
+  hex: string;
+};
+
 export type Product = {
   // Stable internal identifier; never translated.
   id: string;
@@ -42,6 +50,10 @@ export type Product = {
   // Visual inspection regions: camera views over the model. The GLB has no
   // semantic part nodes (see docs/3D-ASSETS.md, "Current deviations").
   focusRegions: FocusRegion[];
+  // Material tinted by the color selection, addressed by name (never an index).
+  colorMaterial: string;
+  colors: ProductColor[];
+  defaultColorId: ProductColor["id"];
 };
 
 export const stockholmChair: Product = {
@@ -58,6 +70,14 @@ export const stockholmChair: Product = {
     en: "Designed for quiet moments.",
     ar: "صُمم للحظات الهادئة.",
   },
+  colorMaterial: "Chair_Fabric",
+  colors: [
+    { id: "sand", name: { en: "Sand", ar: "رملي" }, hex: "#B8A58F" },
+    { id: "olive", name: { en: "Olive", ar: "زيتوني" }, hex: "#6F7456" },
+    { id: "terracotta", name: { en: "Terracotta", ar: "طوبي" }, hex: "#A9654B" },
+    { id: "charcoal", name: { en: "Charcoal", ar: "فحمي" }, hex: "#4A4947" },
+  ],
+  defaultColorId: "sand",
   focusRegions: [
     {
       id: "fabric",

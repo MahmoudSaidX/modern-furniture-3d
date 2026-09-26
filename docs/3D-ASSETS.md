@@ -110,3 +110,7 @@ palette color over the base color). The treatment:
   no rendering change. No optimization or compression was applied.
 - Resulting GLB: 9,996,724 bytes. Optimization and compression (Meshopt,
   KTX2) remain US-601 scope.
+
+US-201 tints the fabric by material name (`Chair_Fabric`, `colorMaterial` in
+product data) on a per-mount clone of the scene and that one material, so the
+cached GLTF is never mutated; `Chair_Wood` and `Material_0.001` are untouched.

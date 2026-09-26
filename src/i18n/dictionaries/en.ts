@@ -27,6 +27,9 @@ const en = {
     focus: {
       label: "Product details",
     },
+    color: {
+      label: "Color",
+    },
   },
 };
 

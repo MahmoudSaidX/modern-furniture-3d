@@ -27,6 +27,9 @@ const ar = {
     focus: {
       label: "تفاصيل المنتج",
     },
+    color: {
+      label: "اللون",
+    },
   },
 } satisfies Dictionary;
 

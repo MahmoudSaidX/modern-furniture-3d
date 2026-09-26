@@ -48,7 +48,7 @@ layers are committed.
   (first: `dev/scene`); they call `notFound()` in production builds.
 - **Lightweight shared state** (`src/state/`) — Zustand stores for
   genuinely shared client state (first: `experience-store.ts`, holding
-  `sceneState` and `selectedProductId`). Stores hold domain values and
+  `sceneState`, `selectedProductId` and `selectedColorId`). Stores hold domain values and
   intent only — never Three.js/R3F objects, controls, refs or GSAP
   timelines. Local UI state stays in its component (`useState`/refs); don't
   globalize it. Configuration, lighting, cart and other domains are added by

@@ -1,13 +1,24 @@
 "use client";
 
-import { Suspense, useLayoutEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, Lightformer, OrbitControls, useGLTF, useProgress } from "@react-three/drei";
-import { Box3, MathUtils, Sphere, Spherical, Vector3, type Object3D, type PerspectiveCamera } from "three";
+import {
+  Box3,
+  MathUtils,
+  Mesh,
+  MeshStandardMaterial,
+  Sphere,
+  Spherical,
+  Vector3,
+  type Object3D,
+  type PerspectiveCamera,
+} from "three";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import type { FocusCamera, FocusRegion } from "@/data/products";
+import type { FocusCamera, FocusRegion, ProductColor } from "@/data/products";
 import type { Dictionary } from "@/i18n/dictionaries/en";
+import { useExperienceStore } from "@/state/experience-store";
 
 const MODEL_URL = "/models/stockholm-chair.glb";
 const BACKGROUND = "#f4f2ee";
@@ -49,11 +60,20 @@ export type SceneRegion = {
   camera: FocusCamera;
 };
 
+// A color with its name already localized by the page.
+export type SceneColor = {
+  id: ProductColor["id"];
+  name: string;
+  hex: string;
+};
+
 type ProductSceneProps = {
   labels: Dictionary["scene"];
   name: string;
   tagline: string;
   regions: SceneRegion[];
+  colorMaterial: string;
+  colors: SceneColor[];
 };
 
 // The single path to the canonical framing: intro completion, intro skip,
@@ -268,15 +288,55 @@ function CinematicIntro({ controlsRef, canonicalRef, copyRef, controlsUiRef, fin
 type ModelProps = IntroRefs & {
   productLimitsRef: RefObject<CameraLimits | null>;
   inspectingRef: RefObject<boolean>;
+  colorMaterial: string;
+  colorHex: string | undefined;
 };
 
-function Model({ controlsRef, canonicalRef, productLimitsRef, inspectingRef, ...intro }: ModelProps) {
+function Model({
+  controlsRef,
+  canonicalRef,
+  productLimitsRef,
+  inspectingRef,
+  colorMaterial,
+  colorHex,
+  ...intro
+}: ModelProps) {
   const { scene } = useGLTF(MODEL_URL);
   const { footprint } = useModelBounds(scene);
 
+  // The cached GLTF scene is shared; clone it and own the tinted material so a
+  // color never leaks into another mount. Geometry and textures stay shared.
+  const { model, fabric } = useMemo(() => {
+    const model = scene.clone(true);
+    let fabric: MeshStandardMaterial | null = null;
+    model.traverse((object) => {
+      if (
+        object instanceof Mesh &&
+        object.material instanceof MeshStandardMaterial &&
+        object.material.name === colorMaterial
+      ) {
+        fabric ??= object.material.clone();
+        object.material = fabric;
+      }
+    });
+    return { model, fabric: fabric as MeshStandardMaterial | null };
+  }, [scene, colorMaterial]);
+
+  useEffect(() => {
+    if (!fabric && process.env.NODE_ENV !== "production") {
+      console.error(`ProductScene: no material named "${colorMaterial}" to tint.`);
+    }
+    return () => fabric?.dispose();
+  }, [fabric, colorMaterial]);
+
+  // The texture's base color is multiplied by this tint (sRGB hex → linear).
+  useEffect(() => {
+    if (fabric && colorHex) fabric.color.set(colorHex);
+  }, [fabric, colorHex]);
+
   return (
     <>
-      <primitive object={scene} />
+      <primitive object={model} />
       {/* Static model: render the soft shadow once. */}
       <ContactShadows frames={1} opacity={0.4} blur={2.5} far={1} scale={footprint * 2} />
       <CameraRig
@@ -307,7 +367,7 @@ const buttonClass =
   "grid min-h-11 min-w-11 place-items-center rounded-full bg-white/90 px-4 text-sm font-medium text-neutral-900 shadow-sm hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900";
 
 // The scene is identical for every locale: it never reads `dir` or the locale.
-export function ProductScene({ labels, name, tagline, regions }: ProductSceneProps) {
+export function ProductScene({ labels, name, tagline, regions, colorMaterial, colors }: ProductSceneProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const canonicalRef = useRef<CameraPose>(null);
   const copyRef = useRef<HTMLDivElement>(null);
@@ -318,6 +378,10 @@ export function ProductScene({ labels, name, tagline, regions }: ProductScenePro
   const [activeRegion, setActiveRegion] = useState<SceneRegion | null>(null);
   const productLimitsRef = useRef<CameraLimits>(null);
   const inspectingRef = useRef(false);
+  const colorsRef = useRef<HTMLDivElement>(null);
+  const selectedColorId = useExperienceStore((state) => state.selectedColorId);
+  const selectColor = useExperienceStore((state) => state.selectColor);
+  const selectedColor = colors.find((color) => color.id === selectedColorId);
   const transitionRef = useRef<{
     tween: gsap.core.Tween;
     limits: CameraLimits;
@@ -349,7 +413,9 @@ export function ProductScene({ labels, name, tagline, regions }: ProductScenePro
     controls.enabled = true;
   };
 
-  const onViewerInput = () => {
+  const onViewerInput = (event?: { target: EventTarget | null }) => {
+    // Choosing a color is not viewer input: it never moves the camera.
+    if (event?.target instanceof Node && colorsRef.current?.contains(event.target)) return;
     finishIntro();
     interruptTransition();
   };
@@ -476,6 +542,8 @@ export function ProductScene({ labels, name, tagline, regions }: ProductScenePro
             canonicalRef={canonicalRef}
             productLimitsRef={productLimitsRef}
             inspectingRef={inspectingRef}
+            colorMaterial={colorMaterial}
+            colorHex={selectedColor?.hex}
             copyRef={copyRef}
             controlsUiRef={controlsUiRef}
             finishRef={finishRef}
@@ -485,19 +553,46 @@ export function ProductScene({ labels, name, tagline, regions }: ProductScenePro
         <OrbitControls ref={controlsRef} makeDefault enablePan={false} />
       </Canvas>
       <LoadingOverlay label={labels.loading} />
-      {/* Non-interactive copy: hidden until the reveal. */}
-      <div ref={copyRef} className="invisible absolute top-4 inset-s-4 text-start opacity-0">
-        <p className="text-lg font-medium text-neutral-900">{name}</p>
-        {/* The tagline area carries the active region's copy while inspecting. */}
-        <p aria-live="polite" className="text-sm text-neutral-700">
-          {activeRegion ? (
-            <>
-              <span className="font-medium text-neutral-900">{activeRegion.name}</span> {activeRegion.description}
-            </>
-          ) : (
-            tagline
-          )}
-        </p>
+      {/* Below sm: copy, then the colors in their own row. From sm: copy at the
+          inline start, colors at the inline end. Only the controls take input. */}
+      <div className="pointer-events-none absolute inset-x-4 top-4 flex flex-col items-start gap-2 sm:flex-row sm:justify-between">
+        {/* Non-interactive copy: hidden until the reveal. */}
+        <div ref={copyRef} className="invisible min-w-0 text-start opacity-0">
+          <p className="text-lg font-medium text-neutral-900">{name}</p>
+          {/* The tagline area carries the active region's copy while inspecting. */}
+          <p aria-live="polite" className="text-sm text-neutral-700">
+            {activeRegion ? (
+              <>
+                <span className="font-medium text-neutral-900">{activeRegion.name}</span> {activeRegion.description}
+              </>
+            ) : (
+              tagline
+            )}
+          </p>
+        </div>
+        {/* Never faded by the intro and never viewer input. */}
+        <div ref={colorsRef} className="pointer-events-auto flex shrink-0 flex-col items-start gap-1 sm:items-end">
+          <div role="group" aria-label={labels.color.label} className="flex gap-2">
+            {colors.map((color) => {
+              const selected = color.id === selectedColorId;
+              return (
+                <button
+                  key={color.id}
+                  type="button"
+                  aria-label={color.name}
+                  aria-pressed={selected}
+                  className={`grid min-h-11 min-w-11 place-items-center rounded-full bg-white/90 shadow-sm hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 ${selected ? "ring-2 ring-neutral-900 ring-offset-2" : ""}`}
+                  onClick={() => selectColor(color.id)}
+                >
+                  <span aria-hidden className="size-7 rounded-full" style={{ backgroundColor: color.hex }} />
+                </button>
+              );
+            })}
+          </div>
+          <p aria-hidden className="text-xs text-neutral-700">
+            {selectedColor?.name}
+          </p>
+        </div>
       </div>
       {/* Below sm: its own row above the viewer controls (bottom-4 + 44px + gap).
           From sm: same bottom edge, wrapping before the viewer controls (≤ 15rem). */}
